@@ -1,0 +1,128 @@
+name: Build and deploy reports
+
+# The reports are derived data, so they are not committed: this workflow
+# regenerates them into _site/ and hands that straight to Pages. That removes
+# the bot commits, the push-retry loop and the workflow_run chain that only
+# existed because deployment used to read the repository instead of the build.
+#
+# _site/ mirrors the old repository layout (index.html at the root, reports
+# under reports/) so published URLs do not change.
+#
+# One-time manual setup: Settings -> Pages -> Build and deployment -> Source:
+# GitHub Actions. This cannot be automated. configure-pages' `enablement: true`
+# calls POST /repos/{owner}/{repo}/pages, which needs administration: write --
+# a permission GITHUB_TOKEN cannot be granted from a workflow, so it fails with
+# "Resource not accessible by integration". Without the setting, deploy-pages
+# fails and the site 404s.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Daily at 00:17 China Standard Time (UTC+8). GitHub cron is UTC only and
+    # has no timezone setting, so 16:17 UTC is the previous day there.
+    # The offset minute is deliberate: GitHub documents that scheduled runs are
+    # delayed at the start of every hour, when everyone else's jobs fire.
+    - cron: "17 16 * * *"
+  workflow_dispatch:
+
+# No contents: write -- nothing is pushed back any more.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install report dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Test report generators
+        run: |
+          python tools/commit-statistics/test_commit_statistics.py
+          python tools/device-pm/test_device_pm.py
+          python tools/vendor-report/test_vendor_report.py
+
+      - name: Check out Zephyr source
+        # Full history: the commit-statistics generator refuses a shallow clone,
+        # because all-history and release ranges would be silently wrong.
+        uses: actions/checkout@v7
+        with:
+          repository: zephyrproject-rtos/zephyr
+          path: .work/zephyr
+          fetch-depth: 0
+
+      # Restore and save are split so a fetch interrupted by GitHub's rate limit
+      # still persists its progress; the per-label cache is resumable, and this
+      # is now the only state that survives between runs.
+      - name: Restore vendor-report API snapshot
+        id: vendor-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: .work/vendor-cache
+          key: vendor-report-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            vendor-report-${{ runner.os }}-
+
+      - name: Regenerate Device PM report
+        env:
+          ZEPHYR_PATH: ${{ github.workspace }}/.work/zephyr
+          DEVICE_PM_OUTPUT_DIR: ${{ github.workspace }}/_site/reports/device-pm
+        run: python tools/device-pm/device_pm.py
+
+      - name: Refresh vendor report
+        env:
+          GH_VALID_TOKEN: ${{ secrets.DASHBOARD_GITHUB_TOKEN }}
+          VENDOR_REPORT_CACHE_DIR: ${{ github.workspace }}/.work/vendor-cache
+          VENDOR_REPORT_OUTPUT_DIR: ${{ github.workspace }}/_site/reports/vendor
+        run: python tools/vendor-report/vendor_report.py
+
+      - name: Generate commit statistics
+        env:
+          COMMIT_STATISTICS_OUTPUT_DIR: ${{ github.workspace }}/_site/reports/commit-statistics
+        run: python tools/commit-statistics/commit_statistics.py --repo .work/zephyr
+
+      - name: Save vendor-report API snapshot
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: .work/vendor-cache
+          key: vendor-report-${{ runner.os }}-${{ github.run_id }}
+
+      - name: Assemble site
+        run: |
+          set -euo pipefail
+          cp index.html _site/
+          # Fail loudly rather than deploying a site with dead links.
+          for page in index.html reports/device-pm/index.html \
+                      reports/vendor/index.html reports/commit-statistics/index.html; do
+            test -s "_site/$page" || { echo "missing _site/$page" >&2; exit 1; }
+          done
+          echo "site contents:"
+          find _site -type f | sort | sed 's/^/  /'
+          du -sh _site
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v5

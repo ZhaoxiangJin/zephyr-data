@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NXP Zephyr Reports</title>
+  <style>
+    :root { --navy: #173f73; --blue: #4472c4; --page: #f5f7fa; --line: #d9e0ea; --ink: #172033; --muted: #667085; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.5 Calibri, Arial, sans-serif; }
+    header { background: var(--navy); color: #fff; padding: 56px max(24px, calc((100% - 1100px) / 2)); }
+    header h1 { font-size: 34px; margin: 0 0 8px; }
+    header p { color: #dbeafe; margin: 0; max-width: 750px; }
+    main { max-width: 1100px; margin: 0 auto; padding: 34px 24px 52px; }
+    h2 { font-size: 21px; margin: 0 0 7px; }
+    .intro { color: var(--muted); margin: 0 0 26px; }
+    .grid { display: grid; gap: 22px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 25px; box-shadow: 0 1px 2px #1018280d; }
+    .tag { color: var(--blue); font-size: 12px; font-weight: bold; letter-spacing: .08em; text-transform: uppercase; }
+    .card p { color: var(--muted); min-height: 72px; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    a.button { display: inline-block; background: var(--blue); border: 1px solid var(--blue); border-radius: 5px; color: #fff; font-weight: bold; padding: 9px 14px; text-decoration: none; }
+    a.button.secondary { background: #fff; color: var(--blue); }
+    footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; margin-top: 38px; padding-top: 18px; }
+    code { background: #eaf0f8; border-radius: 3px; padding: 1px 4px; }
+    @media (max-width: 680px) { .grid { grid-template-columns: 1fr; } header { padding-top: 35px; padding-bottom: 35px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>NXP Zephyr Reports</h1>
+    <p>A single entry point for the NXP Device PM coverage and Zephyr vendor engineering reports.</p>
+  </header>
+  <main>
+    <p class="intro">Open a report for interactive filtering and drill-down, or download the CSV beside it for offline analysis.</p>
+    <section class="grid" aria-label="Reports">
+      <article class="card">
+        <div class="tag">Device Power Management</div>
+        <h2>NXP Device PM by Board</h2>
+        <p>Browse NXP boards, Devicetree compatibles, Device PM enablement, supported lifecycle actions, source evidence, and action notes.</p>
+        <div class="actions">
+          <a class="button" href="reports/device-pm/index.html">Open Device PM report</a>
+          <a class="button secondary" href="reports/device-pm/boards.csv">Download CSV</a>
+        </div>
+      </article>
+      <article class="card">
+        <div class="tag">Zephyr Contributions</div>
+        <h2>Commit Statistics</h2>
+        <p>Rank individual, NXP-only and organization contributions over the whole Zephyr history, recent releases, or a rolling window.</p>
+        <div class="actions">
+          <a class="button" href="reports/commit-statistics/index.html">Open commit statistics</a>
+        </div>
+      </article>
+      <article class="card">
+        <div class="tag">Zephyr Engineering Activity</div>
+        <h2>Vendor Report</h2>
+        <p>Review the existing Zephyr vendor activity dashboard snapshot, including its interactive vendor metrics and drill-down data.</p>
+        <div class="actions">
+          <a class="button" href="reports/vendor/index.html">Open vendor report</a>
+        </div>
+      </article>
+    </section>
+    <footer>
+      Static report portal. Replace the files under <code>reports/</code> with refreshed report outputs, then commit and publish.
+    </footer>
+  </main>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# The report generators are deliberately standard-library only: they run in CI
+# on a plain Python install with no wheels to resolve, and the previous
+# dependencies are gone (XlsxWriter went with the Device PM Excel workbook,
+# packaging with the retired commit-count scripts).
+#
+# Keep this file even while empty: setup-python's pip cache keys off it.
